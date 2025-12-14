@@ -21,12 +21,51 @@
     function App() {
       const [activeTab, setActiveTab] = React.useState('calendar');
       const [selectedDate, setSelectedDate] = React.useState(new Date());
-      const [todos, setTodos] = React.useState([]);
-      const [notes, setNotes] = React.useState([]);
+
+      // Инициализация из localStorage
+      const [todos, setTodos] = React.useState(() => {
+        if (typeof window === 'undefined') return [];
+        try {
+          const saved = localStorage.getItem('my_planner_todos');
+          return saved ? JSON.parse(saved) : [];
+        } catch (e) {
+          console.error('Ошибка чтения todos из localStorage', e);
+          return [];
+        }
+      });
+
+      const [notes, setNotes] = React.useState(() => {
+        if (typeof window === 'undefined') return [];
+        try {
+          const saved = localStorage.getItem('my_planner_notes');
+          return saved ? JSON.parse(saved) : [];
+        } catch (e) {
+          console.error('Ошибка чтения notes из localStorage', e);
+          return [];
+        }
+      });
+
       const [newTodo, setNewTodo] = React.useState({ text: '', time: '09:00', priority: 'medium' });
       const [newNote, setNewNote] = React.useState({ title: '', content: '' });
       const [currentMonth, setCurrentMonth] = React.useState(new Date());
       const [showAddTodoModal, setShowAddTodoModal] = React.useState(false);
+
+      // Сохранение в localStorage при изменении
+      React.useEffect(() => {
+        try {
+          localStorage.setItem('my_planner_todos', JSON.stringify(todos));
+        } catch (e) {
+          console.error('Ошибка сохранения todos в localStorage', e);
+        }
+      }, [todos]);
+
+      React.useEffect(() => {
+        try {
+          localStorage.setItem('my_planner_notes', JSON.stringify(notes));
+        } catch (e) {
+          console.error('Ошибка сохранения notes в localStorage', e);
+        }
+      }, [notes]);
 
       const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
         'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
@@ -232,7 +271,7 @@
                     </div>
 
                     <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-indigo-50 rounded-lg">
-                      <div className="flex justify между items-center mb-3">
+                      <div className="flex justify-between items-center mb-3">
                         <h3 className="font-bold text-base sm:text-lg">
                           {selectedDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
                         </h3>

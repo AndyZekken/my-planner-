@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Мой органайзер</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- React и ReactDOM -->
+  <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+  <!-- Babel для JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-slate-100">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    function App() {
+      const [activeTab, setActiveTab] = React.useState('calendar');
+      const [selectedDate, setSelectedDate] = React.useState(new Date());
+      const [todos, setTodos] = React.useState([]);
+      const [notes, setNotes] = React.useState([]);
+      const [newTodo, setNewTodo] = React.useState({ text: '', time: '09:00', priority: 'medium' });
+      const [newNote, setNewNote] = React.useState({ title: '', content: '' });
+      const [currentMonth, setCurrentMonth] = React.useState(new Date());
+      const [showAddTodoModal, setShowAddTodoModal] = React.useState(false);
+
+      const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+
+      const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+
+      const priorityColors = {
+        high: { bg: 'bg-red-100', border: 'border-red-500', text: 'text-red-700', label: 'Важное' },
+        medium: { bg: 'bg-orange-100', border: 'border-orange-500', text: 'text-orange-700', label: 'Среднее' },
+        low: { bg: 'bg-green-100', border: 'border-green-500', text: 'text-green-700', label: 'Простое' }
+      };
+
+      const getDaysInMonth = (date) => {
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const daysInMonth = lastDay.getDate();
+        const startingDayOfWeek = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
+
+        const days = [];
+        for (let i = 0; i < startingDayOfWeek; i++) {
+          days.push(null);
+        }
+        for (let i = 1; i <= daysInMonth; i++) {
+          days.push(new Date(year, month, i));
+        }
+        return days;
+      };
+
+      const isSameDay = (date1, date2) => {
+        return date1.getDate() === date2.getDate() &&
+               date1.getMonth() === date2.getMonth() &&
+               date1.getFullYear() === date2.getFullYear();
+      };
+
+      const addTodo = () => {
+        if (newTodo.text.trim()) {
+          setTodos([...todos, {
+            id: Date.now(),
+            text: newTodo.text,
+            date: selectedDate.toDateString(),
+            time: newTodo.time,
+            priority: newTodo.priority,
+            completed: false
+          }]);
+          setNewTodo({ text: '', time: '09:00', priority: 'medium' });
+          setShowAddTodoModal(false);
+        }
+      };
+
+      const toggleTodo = (id) => {
+        setTodos(todos.map(todo =>
+          todo.id === id ? { ...todo, completed: !todo.completed } : todo
+        ));
+      };
+
+      const deleteTodo = (id) => {
+        setTodos(todos.filter(todo => todo.id !== id));
+      };
+
+      const addNote = () => {
+        if (newNote.title.trim() || newNote.content.trim()) {
+          setNotes([...notes, {
+            id: Date.now(),
+            title: newNote.title,
+            content: newNote.content,
+            date: new Date().toLocaleString('ru-RU')
+          }]);
+          setNewNote({ title: '', content: '' });
+        }
+      };
+
+      const deleteNote = (id) => {
+        setNotes(notes.filter(note => note.id !== id));
+      };
+
+      const getTodosForDate = (date) => {
+        return todos
+          .filter(todo => todo.date === date.toDateString())
+          .sort((a, b) => a.time.localeCompare(b.time));
+      };
+
+      const changeMonth = (offset) => {
+        setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + offset, 1));
+      };
+
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-2 sm:p-4">
+          <div className="max-w-4xl mx-auto">
+            <h1 className="text-2xl sm:text-3xl font-bold text-center text-indigo-900 mb-4 sm:mb-6">
+              📅 Мой Органайзер
+            </h1>
+
+            <div className="bg-white rounded-lg shadow-lg mb-4">
+              <div className="flex border-b">
+                <button
+                  onClick={() => setActiveTab('calendar')}
+                  className={`flex-1 py-2 sm:py-3 px-2 sm:px-4 font-semibold text-sm sm:text-base ${
+                    activeTab === 'calendar'
+                      ? 'bg-indigo-500 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  📅 Календарь
+                </button>
+                <button
+                  onClick={() => setActiveTab('todos')}
+                  className={`flex-1 py-2 sm:py-3 px-2 sm:px-4 font-semibold text-sm sm:text-base ${
+                    activeTab === 'todos'
+                      ? 'bg-indigo-500 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  ✓ Дела
+                </button>
+                <button
+                  onClick={() => setActiveTab('notes')}
+                  className={`flex-1 py-2 sm:py-3 px-2 sm:px-4 font-semibold text-sm sm:text-base ${
+                    activeTab === 'notes'
+                      ? 'bg-indigo-500 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  📝 Заметки
+                </button>
+              </div>
+
+              <div className="p-3 sm:p-6">
+                {activeTab === 'calendar' && (
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <button
+                        onClick={() => changeMonth(-1)}
+                        className="px-3 sm:px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
+                      >
+                        ←
+                      </button>
+                      <h2 className="text-lg sm:text-xl font-bold text-gray-800">
+                        {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+                      </h2>
+                      <button
+                        onClick={() => changeMonth(1)}
+                        className="px-3 sm:px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
+                      >
+                        →
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2">
+                      {weekDays.map(day => (
+                        <div key={day} className="text-center font-semibold text-gray-600 text-xs sm:text-sm">
+                          {day}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-7 gap-1 sm:gap-2">
+                      {getDaysInMonth(currentMonth).map((day, index) => {
+                        const isToday = day && isSameDay(day, new Date());
+                        const isSelected = day && isSameDay(day, selectedDate);
+                        const dayTodos = day ? getTodosForDate(day) : [];
+                        const hasTodos = dayTodos.length > 0;
+
+                        return (
+                          <div
+                            key={index}
+                            onClick={() => day && setSelectedDate(day)}
+                            className={`aspect-square flex flex-col items-center justify-center rounded-lg cursor-pointer transition-all text-xs sm:text-base ${
+                              !day
+                                ? 'bg-transparent'
+                                : isSelected
+                                ? 'bg-indigo-500 text-white font-bold'
+                                : isToday
+                                ? 'bg-yellow-200 font-bold'
+                                : 'bg-gray-50 hover:bg-gray-200'
+                            }`}
+                          >
+                            {day && (
+                              <>
+                                <span>{day.getDate()}</span>
+                                {hasTodos && (
+                                  <div className="flex gap-0.5 mt-0.5">
+                                    {dayTodos.slice(0, 3).map(todo => (
+                                      <span
+                                        key={todo.id}
+                                        className={`w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full ${
+                                          todo.priority === 'high'
+                                            ? 'bg-red-500'
+                                            : todo.priority === 'medium'
+                                            ? 'bg-orange-500'
+                                            : 'bg-green-500'
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-indigo-50 rounded-lg">
+                      <div className="flex justify между items-center mb-3">
+                        <h3 className="font-bold text-base sm:text-lg">
+                          {selectedDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
+                        </h3>
+                        <button
+                          onClick={() => setShowAddTodoModal(true)}
+                          className="px-3 sm:px-4 py-1 sm:py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 text-sm sm:text-base font-semibold"
+                        >
+                          + Добавить
+                        </button>
+                      </div>
+
+                      {getTodosForDate(selectedDate).length === 0 ? (
+                        <p className="text-gray-500 text-sm sm:text-base">Нет дел на этот день</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {getTodosForDate(selectedDate).map(todo => {
+                            const colors = priorityColors[todo.priority];
+                            return (
+                              <div
+                                key={todo.id}
+                                className={`flex items-start gap-2 sm:gap-3 p-2 sm:p-3 ${colors.bg} border-l-4 ${colors.border} rounded`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={todo.completed}
+                                  onChange={() => toggleTodo(todo.id)}
+                                  className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className={`font-bold ${colors.text} text-xs sm:text-sm`}>
+                                      {todo.time}
+                                    </span>
+                                    <span className={`text-xs px-2 py-0.5 rounded ${colors.bg} ${colors.text} border ${colors.border}`}>
+                                      {colors.label}
+                                    </span>
+                                  </div>
+                                  <p className={`mt-1 text-sm sm:text-base ${todo.completed ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                                    {todo.text}
+                                  </p>
+                                </div>
+                                <button
+                                  onClick={() => deleteTodo(todo.id)}
+                                  className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs sm:text-sm flex-shrink-0"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'todos' && (
+                  <div>
+                    <div className="flex justify-between items-center mb-4">
+                      <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Все дела</h2>
+                      <button
+                        onClick={() => setShowAddTodoModal(true)}
+                        className="px-3 sm:px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 font-semibold text-sm sm:text-base"
+                      >
+                        + Добавить
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {todos.length === 0 ? (
+                        <p className="text-gray-500 text-center py-8 text-sm sm:text-base">
+                          Нет дел. Добавьте первое!
+                        </p>
+                      ) : (
+                        todos
+                          .slice()
+                          .sort((a, b) => {
+                            const dateCompare = new Date(a.date) - new Date(b.date);
+                            if (dateCompare !== 0) return dateCompare;
+                            return a.time.localeCompare(b.time);
+                          })
+                          .map(todo => {
+                            const colors = priorityColors[todo.priority];
+                            return (
+                              <div
+                                key={todo.id}
+                                className={`flex items-start gap-2 sm:gap-3 p-3 sm:p-4 ${colors.bg} border-l-4 ${colors.border} rounded-lg`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={todo.completed}
+                                  onChange={() => toggleTodo(todo.id)}
+                                  className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                                    <span className="text-xs sm:text-sm text-gray-600">
+                                      {new Date(todo.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
+                                    </span>
+                                    <span className={`font-bold ${colors.text} text-xs sm:text-sm`}>
+                                      {todo.time}
+                                    </span>
+                                    <span className={`text-xs px-2 py-0.5 rounded ${colors.bg} ${colors.text} border ${colors.border}`}>
+                                      {colors.label}
+                                    </span>
+                                  </div>
+                                  <p className={`text-sm sm:text-base ${todo.completed ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                                    {todo.text}
+                                  </p>
+                                </div>
+                                <button
+                                  onClick={() => deleteTodo(todo.id)}
+                                  className="px-2 sm:px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs sm:text-sm flex-shrink-0"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            );
+                          })
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'notes' && (
+                  <div>
+                    <h2 className="text-xl sm:text-2xl font-bold mb-4 text-gray-800">Заметки</h2>
+
+                    <div className="mb-6 space-y-3">
+                      <input
+                        type="text"
+                        value={newNote.title}
+                        onChange={(e) => setNewNote({ ...newNote, title: e.target.value })}
+                        placeholder="Заголовок заметки..."
+                        className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm sm:text-base"
+                      />
+                      <textarea
+                        value={newNote.content}
+                        onChange={(e) => setNewNote({ ...newNote, content: e.target.value })}
+                        placeholder="Текст заметки..."
+                        rows="4"
+                        className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm sm:text-base"
+                      />
+                      <button
+                        onClick={addNote}
+                        className="w-full py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 font-semibold text-sm sm:text-base"
+                      >
+                        Добавить заметку
+                      </button>
+                    </div>
+
+                    <div className="space-y-4">
+                      {notes.length === 0 ? (
+                        <p className="text-gray-500 text-center py-8 text-sm sm:text-base">
+                          Нет заметок. Создайте первую!
+                        </p>
+                      ) : (
+                        notes.map(note => (
+                          <div
+                            key={note.id}
+                            className="p-3 sm:p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-lg"
+                          >
+                            <div className="flex justify-between items-start mb-2">
+                              <h3 className="font-bold text-base sm:text-lg text-gray-800">
+                                {note.title || 'Без заголовка'}
+                              </h3>
+                              <button
+                                onClick={() => deleteNote(note.id)}
+                                className="px-2 sm:px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs sm:text-sm flex-shrink-0"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                            <p className="text-sm sm:text-base text-gray-700 whitespace-pre-wrap mb-2">
+                              {note.content}
+                            </p>
+                            <p className="text-xs text-gray-500">{note.date}</p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {showAddTodoModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full">
+                <h3 className="text-lg sm:text-xl font-bold mb-4">
+                  Добавить дело на {selectedDate.toLocaleDateString('ru-RU')}
+                </h3>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Описание дела</label>
+                    <input
+                      type="text"
+                      value={newTodo.text}
+                      onChange={(e) => setNewTodo({ ...newTodo, text: e.target.value })}
+                      placeholder="Что нужно сделать?"
+                      className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm sm:text-base"
+                      autoFocus
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Время</label>
+                    <input
+                      type="time"
+                      value={newTodo.time}
+                      onChange={(e) => setNewTodo({ ...newTodo, time: e.target.value })}
+                      className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm sm:text-base"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Важность</label>
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-3 p-3 bg-red-50 border-2 border-red-200 rounded-lg cursor-pointer hover:bg-red-100">
+                        <input
+                          type="radio"
+                          name="priority"
+                          value="high"
+                          checked={newTodo.priority === 'high'}
+                          onChange={(e) => setNewTodo({ ...newTodo, priority: e.target.value })}
+                          className="w-4 h-4"
+                        />
+                        <span className="text-red-700 font-semibold">🔴 Важное</span>
+                      </label>
+
+                      <label className="flex items-center gap-3 p-3 bg-orange-50 border-2 border-orange-200 rounded-lg cursor-pointer hover:bg-orange-100">
+                        <input
+                          type="radio"
+                          name="priority"
+                          value="medium"
+                          checked={newTodo.priority === 'medium'}
+                          onChange={(e) => setNewTodo({ ...newTodo, priority: e.target.value })}
+                          className="w-4 h-4"
+                        />
+                        <span className="text-orange-700 font-semibold">🟠 Среднее</span>
+                      </label>
+
+                      <label className="flex items-center gap-3 p-3 bg-green-50 border-2 border-green-200 rounded-lg cursor-pointer hover:bg-green-100">
+                        <input
+                          type="radio"
+                          name="priority"
+                          value="low"
+                          checked={newTodo.priority === 'low'}
+                          onChange={(e) => setNewTodo({ ...newTodo, priority: e.target.value })}
+                          className="w-4 h-4"
+                        />
+                        <span className="text-green-700 font-semibold">🟢 Простое</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={() => {
+                        setShowAddTodoModal(false);
+                        setNewTodo({ text: '', time: '09:00', priority: 'medium' });
+                      }}
+                      className="flex-1 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 font-semibold text-sm sm:text-base"
+                    >
+                      Отмена
+                    </button>
+                    <button
+                      onClick={addTodo}
+                      className="flex-1 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 font-semibold text-sm sm:text-base"
+                    >
+                      Добавить
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>
